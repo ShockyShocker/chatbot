@@ -2,60 +2,180 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Diet Chatbot</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Diet Chatbot — Live Online</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial; background:#f2f2f2; }
-    #chat { width: 400px; margin:auto; background:#fff; padding:15px; height:450px; overflow:auto; border-radius:7px; }
-    #input { width:80%; padding:10px; }
-    button { padding:10px; cursor:pointer; }
-    .bot { background:#ddf; padding:8px; margin:5px; border-radius:6px; }
-    .user { background:#cdf; padding:8px; margin:5px; text-align:right; border-radius:6px; }
+    :root{--primary:#6A5ACD;--glass:rgba(255,255,255,0.95)}
+    html,body{height:100%;margin:0}
+    body { font-family: Poppins, Arial, sans-serif; background: linear-gradient(135deg,#84fab0,#8fd3f4); display:flex; justify-content:center; align-items:center; height:100vh; }
+    #container { background:var(--glass); backdrop-filter: blur(8px); width:420px; max-width:95%; border-radius:15px; padding:18px; box-shadow:0 12px 30px rgba(0,0,0,0.18); }
+    #title { text-align:center; font-size:20px; font-weight:700; margin-bottom:10px; display:flex; align-items:center; justify-content:center; gap:8px }
+    #chat { width:100%; background:#fff; padding:14px; height:360px; overflow:auto; border-radius:10px; box-shadow:inset 0 0 6px rgba(0,0,0,0.06); }
+    .meta { font-size:12px; color:#444; text-align:center; margin:8px 0 }
+    #composer{display:flex;gap:8px;align-items:center;margin-top:12px}
+    #input { flex:1; padding:10px 12px; border-radius:10px; border:1px solid rgba(0,0,0,0.08); box-shadow:none; outline:none; font-size:14px }
+    button { padding:10px 14px; cursor:pointer; border:none; border-radius:10px; background:var(--primary); color:white; font-weight:700; transition:0.2s; box-shadow: 0 6px 14px rgba(106,90,205,0.18); }
+    button.secondary{background:transparent;color:var(--primary);border:1.5px solid rgba(106,90,205,0.12);box-shadow:none}
+    button[disabled]{opacity:0.5;cursor:not-allowed}
+    button:hover:not([disabled]){transform:translateY(-2px)}
+    .bot { background:linear-gradient(180deg,#f0f7ff,#e9f1ff); padding:10px; margin:8px 0; border-radius:10px; max-width:86%; }
+    .user { background:linear-gradient(180deg,#e6ffe6,#d8fbd8); padding:10px; margin:8px 0; border-radius:10px; text-align:right; margin-left:auto; max-width:86%; }
+    .small{font-size:12px;color:#555;margin-top:6px}
+    .info {font-size:12px;color:#666;background:#fff8ea;padding:8px;border-radius:8px;margin:8px 0}
+    .timestamp{font-size:11px;color:#777;margin-top:6px}
+    /* typing dots */
+    #typing { display:inline-flex; gap:6px; align-items:center }
+    #typing .dot{ width:8px; height:8px; border-radius:50%; background:#7a7a7a; opacity:0.9; animation:blink 1s infinite; }
+    #typing .dot:nth-child(2){ animation-delay:0.15s }
+    #typing .dot:nth-child(3){ animation-delay:0.3s }
+    @keyframes blink{ 0%{opacity:0.15; transform:translateY(0)} 50%{opacity:1; transform:translateY(-4px)} 100%{opacity:0.15; transform:translateY(0)} }
   </style>
 </head>
 <body>
-
-<div id="chat"></div>
-<br>
-<input id="input" placeholder="Type here…">
-<button onclick="send()">Send</button>
-<button onclick="resetChat()">Reset</button>
+  <div id="container">
+    <div id="title">🥗 <span>Diet Chatbot</span></div>
+    <div id="chat" aria-live="polite"></div>
+    <div class="meta">Server URL: <span id="srv">(configured)</span></div>
+    <div id="composer">
+      <input id="input" placeholder="Ask about diet, e.g. \"What should I eat for breakfast?\"" aria-label="Message input">
+      <button id="sendBtn">Send</button>
+      <button id="resetBtn" class="secondary">Reset</button>
+    </div>
+    <div class="small">This demo is <strong>online-first</strong>. If the server cannot be reached, the bot will use a local fallback response.</div>
+  </div>
 
 <script>
-let url = "https://script.google.com/macros/s/AKfycbzfmUOItWzQNIU1ZMEQaBo3E7sv-tA-VkNUgavQ_R50ONDFegWDGfhqoOxAYE25qpF4/exec";
+// ------- CONFIG -------
+const SERVER_URL = "https://script.google.com/macros/s/AKfycbyuDDiIsnjK-s61MZngOU70Ykxjo2xP4RWycnzeA00BntrHEciSvNzl3EV-e4nNF8_2/exec";
+const FETCH_TIMEOUT = 7000; // ms
 
-const chatBox = document.getElementById("chat");
-function addMsg(msg, cls) {
-  chatBox.innerHTML += `<div class="${cls}">${msg}</div>`;
+// ------- ELEMENTS -------
+const chatBox = document.getElementById('chat');
+const input = document.getElementById('input');
+const sendBtn = document.getElementById('sendBtn');
+const resetBtn = document.getElementById('resetBtn');
+const srvEl = document.getElementById('srv');
+srvEl.textContent = SERVER_URL;
+
+// ------- UTIL -------
+function addMsg(text, cls){
+  const el = document.createElement('div');
+  el.className = cls;
+  el.innerHTML = `<div>${escapeHtml(text)}</div><div class="timestamp">${new Date().toLocaleTimeString()}</div>`;
+  chatBox.appendChild(el);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-function send() {
-  let msg = document.getElementById("input").value;
-  if (!msg) return;
-
-  addMsg(msg, "user");
-
-  fetch(url, {
-    method:"POST",
-    body:JSON.stringify({ question:"unknown", answer:msg })
-  })
-  .then(r => r.json())
-  .then(d => addMsg(d.message, "bot"));
-  
-  document.getElementById("input").value="";
+// ------- OFFLINE FALLBACK LOGIC -------
+function offlineResponse(userMsg){
+  const msg = (userMsg||'').toLowerCase();
+  if(msg.includes('breakfast')) return "Try oats with milk, fruits and a handful of nuts. Keep portion moderate.";
+  if(msg.includes('protein') || msg.includes('muscle')) return "Include eggs/paneer/chicken and pulses. Aim for 20-30g protein per meal depending on age and goals.";
+  if(msg.includes('snack')) return "Choose roasted chana, sprouts, or fruit. Avoid packaged chips and sugary drinks.";
+  if(msg.includes('lose') || msg.includes('fat')) return "Reduce refined carbs, watch portion sizes, include protein and veg, and add daily activity.";
+  if(msg.includes('gain') || msg.includes('bulk')) return "Increase calorie-dense healthy foods: nuts, dairy, whole grains, and spread 5-6 smaller meals.";
+  return "I couldn't reach the server — here's a quick tip: balance carbs, proteins and vegetables. Tell me age and activity level for personalised advice (demo).";
 }
 
-function resetChat() {
-  fetch(url, {
-    method:"POST",
-    body:JSON.stringify({ action:"reset" })
-  })
-  .then(r => r.json())
-  .then(d => addMsg(d.message, "bot"));
-
-  chatBox.innerHTML = "";
+// ------- FETCH WITH TIMEOUT & CORS HEADERS -------
+async function safeFetch(url, payload){
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+  try{
+    // start try block immediately before calling fetch (fixed syntax)
+    const res = await fetch(url, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    clearTimeout(id);
+    if(!res.ok) throw new Error('Server returned ' + res.status);
+    const text = await res.text();
+    try{ return JSON.parse(text); } catch(e){ return { message: text || 'OK' }; }
+  }catch(err){
+    clearTimeout(id);
+    console.warn('safeFetch failed:', err);
+    throw err;
+  }
 }
+
+// ------- Typing indicator elements -------
+function showTyping(){
+  hideTyping();
+  const typingDiv = document.createElement('div');
+  typingDiv.id = 'typing';
+  typingDiv.className = 'bot';
+  typingDiv.innerHTML = '<div id="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+  chatBox.appendChild(typingDiv);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+function hideTyping(){
+  const t = document.getElementById('typing');
+  if(t) t.remove();
+}
+
+// ------- ACTIONS -------
+async function sendMessage(){
+  const msg = input.value.trim();
+  if(!msg) return;
+  addMsg(msg, 'user');
+  input.value = '';
+  sendBtn.disabled = true;
+
+  // Show typing indicator
+  showTyping();
+
+  const payload = { question: msg };
+
+  try{
+    const data = await safeFetch(SERVER_URL, payload);
+    hideTyping();
+    // Expecting { message: '...' } or { reply: '...' }
+    if(data && (data.message || data.reply)){
+      addMsg(data.message || data.reply, 'bot');
+    } else if(typeof data === 'string'){
+      addMsg(data, 'bot');
+    } else if(data && data.error){
+      addMsg('Server error: ' + data.error, 'bot');
+      addMsg(offlineResponse(msg), 'bot');
+    } else {
+      addMsg('Server replied with unexpected format. Using fallback.', 'bot');
+      addMsg(offlineResponse(msg), 'bot');
+    }
+  }catch(e){
+    hideTyping();
+    addMsg('Could not reach server (network/CORS/timeout). Using offline demo response.', 'bot');
+    addMsg(offlineResponse(msg), 'bot');
+  } finally{
+    sendBtn.disabled = false;
+  }
+}
+
+async function resetChat(){
+  chatBox.innerHTML = '';
+  addMsg('Chat cleared locally.', 'bot');
+  try{
+    const payload = { action: 'reset' };
+    await safeFetch(SERVER_URL, payload);
+    addMsg('Server reset succeeded (if server allowed it).', 'bot');
+  }catch(e){
+    addMsg('Server reset failed or blocked by CORS — nothing to worry about for local demo.', 'bot');
+  }
+}
+
+// ------- EVENTS -------
+sendBtn.addEventListener('click', sendMessage);
+resetBtn.addEventListener('click', resetChat);
+input.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') sendMessage(); });
+
+// ------- STARTUP SAMPLE MESSAGES -------
+addMsg('Hello! I am DietBot — ask me something like "What should I eat for lunch?"', 'bot');
+addMsg('Tip: This page will try the configured server, but if it fails (CORS / network / sandbox), it will use a local fallback so you can continue testing.', 'bot');
+
 </script>
-
 </body>
 </html>
