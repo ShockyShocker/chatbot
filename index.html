@@ -1,148 +1,60 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Healthy Diet AI Chatbot</title>
-
-<style>
-  body {
-    font-family: 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #121212, #1f1f1f, #000);
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: white;
-  }
-
-  .box {
-    width: 420px;
-    background: rgba(40,40,40,0.6);
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 0 20px #000;
-    backdrop-filter: blur(5px);
-    animation: pop 0.4s ease-out;
-  }
-
-  @keyframes pop {
-    0% { transform: scale(0.6); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-  }
-
-  h2 {
-    text-align: center;
-    margin-bottom: 12px;
-    letter-spacing: 1px;
-  }
-
-  #chat {
-    height: 350px;
-    overflow-y: auto;
-    border-radius: 8px;
-    padding: 10px;
-    border: 1px solid #444;
-    background: #1c1c1c;
-    scrollbar-width: thin;
-  }
-
-  .bot, .user {
-    padding: 8px 12px;
-    margin: 6px 0;
-    border-radius: 8px;
-    max-width: 80%;
-    animation: fade 0.3s ease;
-  }
-
-  @keyframes fade {
-    from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .bot {
-    background: linear-gradient(145deg, #4548cf, #5963ff);
-    box-shadow: 0 0 6px #5360ff;
-  }
-
-  .user {
-    margin-left: auto;
-    background: linear-gradient(145deg, #00a28b, #00d1b0);
-    box-shadow: 0 0 6px #00d1b0;
-  }
-
-  #typing {
-    font-size: 14px;
-    opacity: 0.8;
-    padding-left: 10px;
-    display: none;
-  }
-
-  input {
-    width: 100%;
-    padding: 10px;
-    margin-top: 8px;
-    border-radius: 5px;
-    border: none;
-    outline: none;
-    transition: 0.2s;
-    font-size: 15px;
-  }
-
-  input:focus {
-    box-shadow: 0 0 8px #00ffd5;
-  }
-</style>
-
+  <meta charset="UTF-8">
+  <title>Diet Chatbot</title>
+  <style>
+    body { font-family: Arial; background:#f2f2f2; }
+    #chat { width: 400px; margin:auto; background:#fff; padding:15px; height:450px; overflow:auto; border-radius:7px; }
+    #input { width:80%; padding:10px; }
+    button { padding:10px; cursor:pointer; }
+    .bot { background:#ddf; padding:8px; margin:5px; border-radius:6px; }
+    .user { background:#cdf; padding:8px; margin:5px; text-align:right; border-radius:6px; }
+  </style>
 </head>
 <body>
 
-<div class="box">
-  <h2>🍏 Healthy Diet AI</h2>
-  <div id="chat"></div>
-  <p id="typing">Bot is typing...</p>
-  <input id="userInput" placeholder="Type here…" onkeydown="check(event)">
-</div>
+<div id="chat"></div>
+<br>
+<input id="input" placeholder="Type here…">
+<button onclick="send()">Send</button>
+<button onclick="resetChat()">Reset</button>
 
 <script>
-function bot(msg){
-  setTimeout(() => {
-    document.getElementById("typing").style.display = "none";
-    document.getElementById("chat").innerHTML += "<div class='bot'>"+msg+"</div>";
-    scroll();
-  }, 600);
+let url = "https://script.google.com/macros/s/AKfycbzfmUOItWzQNIU1ZMEQaBo3E7sv-tA-VkNUgavQ_R50ONDFegWDGfhqoOxAYE25qpF4/exec";
+
+const chatBox = document.getElementById("chat");
+function addMsg(msg, cls) {
+  chatBox.innerHTML += `<div class="${cls}">${msg}</div>`;
+  chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-function user(msg){
-  document.getElementById("chat").innerHTML += "<div class='user'>"+msg+"</div>";
-  scroll();
+function send() {
+  let msg = document.getElementById("input").value;
+  if (!msg) return;
+
+  addMsg(msg, "user");
+
+  fetch(url, {
+    method:"POST",
+    body:JSON.stringify({ question:"unknown", answer:msg })
+  })
+  .then(r => r.json())
+  .then(d => addMsg(d.message, "bot"));
+  
+  document.getElementById("input").value="";
 }
 
-function scroll(){
-  let box = document.getElementById("chat");
-  box.scrollTop = box.scrollHeight;
+function resetChat() {
+  fetch(url, {
+    method:"POST",
+    body:JSON.stringify({ action:"reset" })
+  })
+  .then(r => r.json())
+  .then(d => addMsg(d.message, "bot"));
+
+  chatBox.innerHTML = "";
 }
-
-function check(e){
-  if(e.key === "Enter"){
-    let msg = document.getElementById("userInput").value;
-    user(msg);
-    document.getElementById("typing").style.display = "block";
-
-    if(msg.toLowerCase().includes("healthy diet chart")){
-      bot("✅ Please go to Screen-3 and fill the diet form.");
-      bot("📌 After submitting, come back here for your diet!");
-    } else {
-      bot("🤖 I only answer healthy diet chart requests!");
-    }
-
-    document.getElementById("userInput").value = "";
-  }
-}
-
-// welcome animation
-setTimeout(()=>{
-  bot("👋 Hey! I'm your AI diet assistant.");
-  bot("Type: 'I want a healthy diet chart'");
-}, 400);
 </script>
 
 </body>
