@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NutriMate</title>
+
+<style>
+  body {
+    font-family: Poppins, system-ui;
+    background: linear-gradient(135deg, #0f1724, #0b1220);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+    padding: 20px;
+  }
+
+  .card {
+    width: 520px;
+    max-width: 96%;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 18px;
+    border-radius: 14px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .6);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  h1 {
+    margin: 0 0 12px;
+    font-size: 20px;
+    text-align: center;
+  }
+
+  #chat {
+    height: 380px;
+    overflow-y: auto;
+    padding: 12px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  }
+
+  .bubble {
+    max-width: 82%;
+    padding: 10px;
+    border-radius: 12px;
+    margin: 8px 0;
+    white-space: pre-wrap;
+  }
+
+  .user {
+    margin-left: auto;
+    background: linear-gradient(145deg, #00e6a1, #00c487);
+    color: #002b20;
+  }
+
+  .bot {
+    background: linear-gradient(145deg, #4c51ff, #7a81ff);
+    color: white;
+  }
+
+  #promptArea {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  input, select {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, .06);
+    background: rgba(255, 255, 255, .02);
+    color: #fff;
+  }
+
+  button {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: none;
+    background: #fff;
+    color: #000;
+    cursor: pointer;
+    font-weight: 700;
+  }
+</style>
+</head>
+
+<body>
+<div class="card">
+  <h1>🍏 NutriMate: Your Personal AI Diet Planner</h1>
+  <div id="chat" role="log" aria-live="polite"></div>
+  <div id="promptArea"></div>
+</div>
+
+
+<script type="module">
+
+// ✅ Groq API Key
+const OPENAI_API_KEY = "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";
+
+// ✅ Works now
+const API_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+const chat = document.getElementById("chat");
+const promptArea = document.getElementById("promptArea");
+
+function append(role, text) {
+  const bubble = document.createElement("div");
+  bubble.className = `bubble ${role}`;
+  bubble.textContent = text || "No response found.";
+  chat.appendChild(bubble);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+// ✅ Save answers locally
+const saved = JSON.parse(localStorage.getItem("nutriUser")) || {};
+const answers = saved || {};
+
+const questions = [
+  { key: "name", q: "What is your name?", type: "text" },
+  { key: "age", q: "Age?", type: "number" },
+  { key: "gender", q: "Gender?", type: "select", options: ["Male","Female","Other"] },
+  { key: "height_cm", q: "Height (cm)?", type: "number" },
+  { key: "weight_kg", q: "Weight (kg)?", type: "number" },
+  { key: "dietType", q: "Diet preference?", type: "select", options: ["Veg","Non-Veg","Vegan","Other"] },
+  { key: "allergies", q: "Any allergies?", type: "text" },
+  { key: "activity", q: "Activity level?", type: "select", options: ["Low","Moderate","High"] },
+  {
+    key: "region",
+    q: "Cuisine preference?",
+    type: "select",
+    options: [
+      "Indian","Chinese","Italian","Japanese",
+      "Continental","Thai","Mediterranean","Fusion"
+    ]
+  },
+  { key: "goal", q: "Main goal?", type: "text" },
+];
+
+let index = saved.completed ? questions.length : 0;
+
+// ✅ Calorie calculator
+function calculateCalories(age, gender, weight, height, activity) {
+  age = Number(age);
+  weight = Number(weight);
+  height = Number(height);
+
+  let bmr;
+
+  if (gender.toLowerCase() === "male") {
+    bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+  } else if (gender.toLowerCase() === "female") {
+    bmr = 10 * weight + 6.25 * height - 5 * age - 161;
+  } else {
+    bmr = 10 * weight + 6.25 * height - 5 * age;
+  }
+
+  const factor = activity === "High" ? 1.7 :
+                 activity === "Moderate" ? 1.55 : 1.3;
+
+  return Math.round(bmr * factor);
+}
+
+// === UI Rendering ===
+
+function renderQuestion(i) {
+  promptArea.innerHTML = "";
+  if (i >= questions.length) return endQuestions();
+
+  const q = questions[i];
+  append("bot", q.q);
+
+  let input = q.type === "select" ? createSelect(q.options) : createInput(q.type);
+  input.id = "answerInput";
+
+  promptArea.appendChild(input);
+
+  const btn = document.createElement("button");
+  btn.textContent = (i === questions.length - 1) ? "Submit" : "Next";
+  btn.onclick = handleAnswer;
+
+  promptArea.appendChild(btn);
+  input.focus();
+  input.addEventListener("keydown", e => e.key === "Enter" && handleAnswer());
+}
+
+function createInput(type) {
+  const inp = document.createElement("input");
+  inp.type = type || "text";
+  return inp;
+}
+
+function createSelect(opts) {
+  const sel = document.createElement("select");
+  opts.forEach(o => {
+    const op = document.createElement("option");
+    op.value = o;
+    op.textContent = o;
+    sel.appendChild(op);
+  });
+  return sel;
+}
+
+function handleAnswer() {
+  const el = document.getElementById("answerInput");
+  const val = el.value.trim() || "None";
+  append("user", val);
+
+  answers[questions[index].key] = val;
+  index++;
+
+  if (index < questions.length) {
+    renderQuestion(index);
+  } else endQuestions();
+}
+
+function endQuestions() {
+  promptArea.innerHTML = "";
+  append("bot", "Calculating authentic medical-grade diet… 😎");
+
+  answers.calories = calculateCalories(
+    answers.age, answers.gender, answers.weight_kg, answers.height_cm, answers.activity
+  );
+
+  answers.completed = true;
+  localStorage.setItem("nutriUser", JSON.stringify(answers));
+
+  generateDiet();
+}
+
+// === Generate Diet ===
+
+async function generateDiet() {
+  const prompt = `
+You are a certified global dietician.
+
+Generate a personalized 1-day diet plan based on:
+
+${JSON.stringify(answers, null, 2)}
+
+Cuisine preference must be **${answers.region} style** foods.
+
+Include:
+- Breakfast
+- Mid-meal snack
+- Lunch
+- Evening snack
+- Dinner
+- Restrictions
+- Water intake target
+- Approx calories: ${answers.calories} kcal
+Portions must be realistic. Avoid repetition.
+`;
+
+  try {
+    const resp = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-8b-instant",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+      }),
+    });
+
+    const data = await resp.json();
+
+    if (data.error) return append("bot", "⚠️ " + data.error.message);
+
+    const text = data?.choices?.[0]?.message?.content || "No diet generated.";
+    append("bot", text);
+
+    createPDFButton(text);
+
+  } catch (err) {
+    append("bot", "⚠ Network/API issue.");
+  }
+}
+
+// === PDF Export ===
+function createPDFButton(text) {
+  const btn = document.createElement("button");
+  btn.textContent = "Export Diet (PDF)";
+  btn.onclick = () => exportPDF(text);
+  promptArea.appendChild(btn);
+}
+
+function exportPDF(txt) {
+  const win = window.open("", "_blank");
+  win.document.write(`<pre>${txt}</pre>`);
+  win.print();
+}
+
+// Start
+append("bot", "Welcome to NutriMate 2.0 🤖🍏");
+renderQuestion(index);
+
+</script>
+</body>
+</html>
