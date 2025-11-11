@@ -1,3 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>NutriMate 2.0 — Exhibition</title>
+
+<style>
+  body {
+    font-family: Poppins, sans-serif;
+    background: linear-gradient(135deg,#0f1724,#0b1220);
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+  }
+
+  #container {
+    width: 360px;
+    background: #111929;
+    padding: 18px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px #000;
+  }
+
+  #chat {
+    height: 420px;
+    overflow-y: auto;
+    border: 1px solid #344;
+    padding: 8px;
+    border-radius: 8px;
+  }
+
+  .bubble {
+    padding: 8px 10px;
+    margin: 6px 0;
+    border-radius: 8px;
+    max-width: 90%;
+  }
+
+  .bot {
+    background: #233043;
+    text-align: left;
+  }
+
+  .user {
+    background: #0099cc;
+    text-align: right;
+    margin-left: auto;
+  }
+
+  #promptArea {
+    margin-top: 10px;
+    display: flex;
+    gap: 6px;
+  }
+
+  input, select {
+    width: 100%;
+    padding: 6px;
+    border-radius: 5px;
+    border: none;
+  }
+
+  button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    background: #00d98b;
+    cursor: pointer;
+  }
+</style>
+</head>
+
+<body>
+<div id="container">
+  <h3>NutriMate 2.0 🤖🍏</h3>
+  <div id="chat"></div>
+  <div id="promptArea"></div>
+</div>
+
 <script type="module">
 
 // ✅ Groq API Key
@@ -20,7 +103,6 @@ function append(role, text) {
 // ✅ Save answers locally
 const saved = JSON.parse(localStorage.getItem("nutriUser")) || {};
 const answers = saved || {};
-let index = saved && saved.completed ? 999 : 0;
 
 const questions = [
   { key: "name", q: "What is your name?", type: "text" },
@@ -36,30 +118,34 @@ const questions = [
     q: "Cuisine preference?",
     type: "select",
     options: [
-      "Indian",
-      "Chinese",
-      "Italian",
-      "Japanese",
-      "Continental",
-      "Thai",
-      "Mediterranean",
-      "Fusion"
+      "Indian","Chinese","Italian","Japanese",
+      "Continental","Thai","Mediterranean","Fusion"
     ]
   },
   { key: "goal", q: "Main goal?", type: "text" },
 ];
 
+let index = saved.completed ? questions.length : 0;
 
 // ✅ Calorie calculator
 function calculateCalories(age, gender, weight, height, activity) {
+  age = Number(age);
+  weight = Number(weight);
+  height = Number(height);
+
   let bmr;
+
   if (gender.toLowerCase() === "male") {
     bmr = 10 * weight + 6.25 * height - 5 * age + 5;
-  } else {
+  } else if (gender.toLowerCase() === "female") {
     bmr = 10 * weight + 6.25 * height - 5 * age - 161;
+  } else {
+    bmr = 10 * weight + 6.25 * height - 5 * age;
   }
 
-  const factor = activity === "High" ? 1.7 : activity === "Moderate" ? 1.55 : 1.3;
+  const factor = activity === "High" ? 1.7 :
+                 activity === "Moderate" ? 1.55 : 1.3;
+
   return Math.round(bmr * factor);
 }
 
@@ -118,7 +204,7 @@ function handleAnswer() {
 
 function endQuestions() {
   promptArea.innerHTML = "";
-  append("bot", "Calculating authentic diet based on medical BMR… 😎");
+  append("bot", "Calculating authentic medical-grade diet… 😎");
 
   answers.calories = calculateCalories(
     answers.age, answers.gender, answers.weight_kg, answers.height_cm, answers.activity
@@ -134,22 +220,24 @@ function endQuestions() {
 
 async function generateDiet() {
   const prompt = `
-You are a certified Indian dietician.
-Generate a personalized 1-day plan.
+You are a certified global dietician.
 
-User:
+Generate a personalized 1-day diet plan based on:
+
 ${JSON.stringify(answers, null, 2)}
+
+Cuisine preference must be **${answers.region} style** foods.
 
 Include:
 - Breakfast
-- Mid-meal
+- Mid-meal snack
 - Lunch
 - Evening snack
 - Dinner
 - Restrictions
-- Water target
+- Water intake target
 - Approx calories: ${answers.calories} kcal
-Keep portions realistic. No repetition.
+Portions must be realistic. Avoid repetition.
 `;
 
   try {
@@ -167,7 +255,6 @@ Keep portions realistic. No repetition.
     });
 
     const data = await resp.json();
-    console.log(data); // ✅ Debug
 
     if (data.error) return append("bot", "⚠️ " + data.error.message);
 
@@ -178,7 +265,6 @@ Keep portions realistic. No repetition.
 
   } catch (err) {
     append("bot", "⚠ Network/API issue.");
-    console.log(err);
   }
 }
 
@@ -201,3 +287,5 @@ append("bot", "Welcome to NutriMate 2.0 🤖🍏");
 renderQuestion(index);
 
 </script>
+</body>
+</html>
