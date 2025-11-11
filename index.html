@@ -118,7 +118,8 @@ function append(role, text) {
 }
 
 // ✅ Save answers locally
-const saved = JSON.parse(localStorage.getItem("nutriUser")) || {};
+localStorage.removeItem("nutriUser");
+const saved = {};
 const answers = saved || {};
 
 const questions = [
