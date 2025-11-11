@@ -1,85 +1,102 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>NutriMate 2.0 — Exhibition</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NutriMate</title>
 
 <style>
   body {
-    font-family: Poppins, sans-serif;
-    background: linear-gradient(135deg,#0f1724,#0b1220);
+    font-family: Poppins, system-ui;
+    background: linear-gradient(135deg, #0f1724, #0b1220);
     color: #fff;
     display: flex;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
     height: 100vh;
     margin: 0;
+    padding: 20px;
   }
 
-  #container {
-    width: 360px;
-    background: #111929;
+  .card {
+    width: 520px;
+    max-width: 96%;
+    background: rgba(255, 255, 255, 0.03);
     padding: 18px;
-    border-radius: 10px;
-    box-shadow: 0px 0px 10px #000;
+    border-radius: 14px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .6);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  h1 {
+    margin: 0 0 12px;
+    font-size: 20px;
+    text-align: center;
   }
 
   #chat {
-    height: 420px;
+    height: 380px;
     overflow-y: auto;
-    border: 1px solid #344;
-    padding: 8px;
-    border-radius: 8px;
+    padding: 12px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
   }
 
   .bubble {
-    padding: 8px 10px;
-    margin: 6px 0;
-    border-radius: 8px;
-    max-width: 90%;
-  }
-
-  .bot {
-    background: #233043;
-    text-align: left;
+    max-width: 82%;
+    padding: 10px;
+    border-radius: 12px;
+    margin: 8px 0;
+    white-space: pre-wrap;
   }
 
   .user {
-    background: #0099cc;
-    text-align: right;
     margin-left: auto;
+    background: linear-gradient(145deg, #00e6a1, #00c487);
+    color: #002b20;
+  }
+
+  .bot {
+    background: linear-gradient(145deg, #4c51ff, #7a81ff);
+    color: white;
   }
 
   #promptArea {
-    margin-top: 10px;
+    margin-top: 12px;
     display: flex;
-    gap: 6px;
+    gap: 8px;
+    align-items: center;
   }
 
   input, select {
-    width: 100%;
-    padding: 6px;
-    border-radius: 5px;
-    border: none;
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, .06);
+    background: rgba(255, 255, 255, .02);
+    color: #fff;
   }
 
   button {
-    padding: 6px 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
     border: none;
-    border-radius: 6px;
-    background: #00d98b;
+    background: #fff;
+    color: #000;
     cursor: pointer;
+    font-weight: 700;
   }
 </style>
 </head>
 
 <body>
-<div id="container">
-  <h3>NutriMate 2.0 🤖🍏</h3>
-  <div id="chat"></div>
+<div class="card">
+  <h1>🍏 NutriMate: Your Personal AI Diet Planner</h1>
+  <div id="chat" role="log" aria-live="polite"></div>
   <div id="promptArea"></div>
 </div>
+
 
 <script type="module">
 
