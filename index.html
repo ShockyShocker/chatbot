@@ -1,108 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NutriMate</title>
-
-<style>
-  body {
-    font-family: Poppins, system-ui;
-    background: linear-gradient(135deg, #0f1724, #0b1220);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    margin: 0;
-    padding: 20px;
-  }
-
-  .card {
-    width: 520px;
-    max-width: 96%;
-    background: rgba(255, 255, 255, 0.03);
-    padding: 18px;
-    border-radius: 14px;
-    backdrop-filter: blur(8px);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, .6);
-    border: 1px solid rgba(255, 255, 255, 0.04);
-  }
-
-  h1 {
-    margin: 0 0 12px;
-    font-size: 20px;
-    text-align: center;
-  }
-
-  #chat {
-    height: 380px;
-    overflow-y: auto;
-    padding: 12px;
-    border-radius: 10px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
-  }
-
-  .bubble {
-    max-width: 82%;
-    padding: 10px;
-    border-radius: 12px;
-    margin: 8px 0;
-    white-space: pre-wrap;
-  }
-
-  .user {
-    margin-left: auto;
-    background: linear-gradient(145deg, #00e6a1, #00c487);
-    color: #002b20;
-  }
-
-  .bot {
-    background: linear-gradient(145deg, #4c51ff, #7a81ff);
-    color: white;
-  }
-
-  #promptArea {
-    margin-top: 12px;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-
-  input, select {
-    flex: 1;
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, .06);
-    background: rgba(255, 255, 255, .02);
-    color: #fff;
-  }
-
-  button {
-    padding: 10px 12px;
-    border-radius: 8px;
-    border: none;
-    background: #fff;
-    color: #000;
-    cursor: pointer;
-    font-weight: 700;
-  }
-</style>
-</head>
-
-<body>
-<div class="card">
-  <h1>🍏 NutriMate: Your Personal AI Diet Planner</h1>
-  <div id="chat" role="log" aria-live="polite"></div>
-  <div id="promptArea"></div>
-</div>
-
 <script type="module">
 
-// ✅ Your OpenAI-compatible key
+// ✅ Groq API Key
 const OPENAI_API_KEY = "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";
 
-// ✅ Proxy endpoint (Groq-compatible)
+// ✅ Works now
 const API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 const chat = document.getElementById("chat");
@@ -111,10 +12,15 @@ const promptArea = document.getElementById("promptArea");
 function append(role, text) {
   const bubble = document.createElement("div");
   bubble.className = `bubble ${role}`;
-  bubble.textContent = text || "Error: Empty response";
+  bubble.textContent = text || "No response found.";
   chat.appendChild(bubble);
   chat.scrollTop = chat.scrollHeight;
 }
+
+// ✅ Save answers locally
+const saved = JSON.parse(localStorage.getItem("nutriUser")) || {};
+const answers = saved || {};
+let index = saved && saved.completed ? 999 : 0;
 
 const questions = [
   { key: "name", q: "What is your name?", type: "text" },
@@ -125,38 +31,64 @@ const questions = [
   { key: "dietType", q: "Diet preference?", type: "select", options: ["Veg","Non-Veg","Vegan","Other"] },
   { key: "allergies", q: "Any allergies?", type: "text" },
   { key: "activity", q: "Activity level?", type: "select", options: ["Low","Moderate","High"] },
-  { key: "region", q: "Region preference?", type: "text" },
+  {
+    key: "region",
+    q: "Cuisine preference?",
+    type: "select",
+    options: [
+      "Indian",
+      "Chinese",
+      "Italian",
+      "Japanese",
+      "Continental",
+      "Thai",
+      "Mediterranean",
+      "Fusion"
+    ]
+  },
   { key: "goal", q: "Main goal?", type: "text" },
 ];
 
-const answers = {};
-let index = 0;
+
+// ✅ Calorie calculator
+function calculateCalories(age, gender, weight, height, activity) {
+  let bmr;
+  if (gender.toLowerCase() === "male") {
+    bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+  } else {
+    bmr = 10 * weight + 6.25 * height - 5 * age - 161;
+  }
+
+  const factor = activity === "High" ? 1.7 : activity === "Moderate" ? 1.55 : 1.3;
+  return Math.round(bmr * factor);
+}
+
+// === UI Rendering ===
 
 function renderQuestion(i) {
   promptArea.innerHTML = "";
-  const q = questions[i];
+  if (i >= questions.length) return endQuestions();
 
+  const q = questions[i];
   append("bot", q.q);
 
-  let input = (q.type === "select")
-    ? createSelect(q.options)
-    : createInput(q.type);
-
+  let input = q.type === "select" ? createSelect(q.options) : createInput(q.type);
   input.id = "answerInput";
+
   promptArea.appendChild(input);
 
   const btn = document.createElement("button");
   btn.textContent = (i === questions.length - 1) ? "Submit" : "Next";
   btn.onclick = handleAnswer;
-  promptArea.appendChild(btn);
 
+  promptArea.appendChild(btn);
   input.focus();
   input.addEventListener("keydown", e => e.key === "Enter" && handleAnswer());
 }
 
 function createInput(type) {
   const inp = document.createElement("input");
-  inp.type = type === "number" ? "number" : "text";
+  inp.type = type || "text";
   return inp;
 }
 
@@ -181,47 +113,43 @@ function handleAnswer() {
 
   if (index < questions.length) {
     renderQuestion(index);
-  } else {
-    promptArea.innerHTML = "";
-    append("bot", "Generating your perfect diet… 🍽️");
-    generateDiet();
-  }
+  } else endQuestions();
 }
 
+function endQuestions() {
+  promptArea.innerHTML = "";
+  append("bot", "Calculating authentic diet based on medical BMR… 😎");
+
+  answers.calories = calculateCalories(
+    answers.age, answers.gender, answers.weight_kg, answers.height_cm, answers.activity
+  );
+
+  answers.completed = true;
+  localStorage.setItem("nutriUser", JSON.stringify(answers));
+
+  generateDiet();
+}
+
+// === Generate Diet ===
+
 async function generateDiet() {
-  const diet = answers.dietType.toLowerCase();
-  const rules =
-    diet === "veg" ? "Include paneer/curd. Avoid tofu." :
-    diet === "vegan" ? "Exclude dairy. Use soy/almond milk." : "";
-
   const prompt = `
-You are a certified nutritionist.
-Generate a 1-day personalized INDIAN balanced diet:
+You are a certified Indian dietician.
+Generate a personalized 1-day plan.
 
-Name: ${answers.name}
-Age: ${answers.age}
-Gender: ${answers.gender}
-Height: ${answers.height_cm} cm
-Weight: ${answers.weight_kg} kg
-Diet type: ${answers.dietType}
-Allergies: ${answers.allergies}
-Activity: ${answers.activity}
-Region: ${answers.region}
-Goal: ${answers.goal}
-
-RULES:
-${rules}
+User:
+${JSON.stringify(answers, null, 2)}
 
 Include:
-• Breakfast
-• Mid-meal
-• Lunch
-• Evening Snack
-• Dinner
-• Water intake target
-• Restrictions
-• Approx calories
-Keep portions realistic. No dish repetition.
+- Breakfast
+- Mid-meal
+- Lunch
+- Evening snack
+- Dinner
+- Restrictions
+- Water target
+- Approx calories: ${answers.calories} kcal
+Keep portions realistic. No repetition.
 `;
 
   try {
@@ -232,25 +160,44 @@ Keep portions realistic. No dish repetition.
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "llama-3.1-8b-instant",
+        model: "llama-3.1-8b",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
       }),
     });
 
     const data = await resp.json();
-    const text = data?.choices?.[0]?.message?.content ?? "Failed to generate.";
+    console.log(data); // ✅ Debug
+
+    if (data.error) return append("bot", "⚠️ " + data.error.message);
+
+    const text = data?.choices?.[0]?.message?.content || "No diet generated.";
     append("bot", text);
 
+    createPDFButton(text);
+
   } catch (err) {
-    append("bot", "⚠ Network/API error.");
+    append("bot", "⚠ Network/API issue.");
+    console.log(err);
   }
 }
 
-// Start chatbot
-append("bot", "Hi! Answer a few questions and I’ll build your perfect diet 😎");
-renderQuestion(0);
+// === PDF Export ===
+function createPDFButton(text) {
+  const btn = document.createElement("button");
+  btn.textContent = "Export Diet (PDF)";
+  btn.onclick = () => exportPDF(text);
+  promptArea.appendChild(btn);
+}
+
+function exportPDF(txt) {
+  const win = window.open("", "_blank");
+  win.document.write(`<pre>${txt}</pre>`);
+  win.print();
+}
+
+// Start
+append("bot", "Welcome to NutriMate 2.0 🤖🍏");
+renderQuestion(index);
 
 </script>
-</body>
-</html>
