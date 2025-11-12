@@ -114,6 +114,15 @@
     opacity: 0.6;
     margin-top: 15px;
   }
+  @keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  50% { transform: translateX(8px); }
+  75% { transform: translateX(-8px); }
+}
+.shake {
+  animation: shake 0.3s ease;
+}
 </style>
 </head>
 
@@ -247,10 +256,13 @@ function isValid(q, val) {
 function handleAnswer() {
   const el = document.getElementById("answerInput");
   const val = el.value.trim();
-
   const q = questions[index];
+
+  // --- Validation ---
   if (!isValid(q, val)) {
-    alert("⚠️ Please enter a valid value. Check limits for age (1–100) and weight (1–200).");
+    const card = document.querySelector(".card");
+    card.classList.add("shake");
+    setTimeout(() => card.classList.remove("shake"), 400);
     return;
   }
 
@@ -258,8 +270,11 @@ function handleAnswer() {
   answers[q.key] = val;
   index++;
 
-  if (index < questions.length) renderQuestion(index);
-  else endQuestions();
+  if (index < questions.length) {
+    renderQuestion(index);
+  } else {
+    endQuestions();
+  }
 }
 
 function endQuestions() {
