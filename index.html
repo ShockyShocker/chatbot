@@ -5,6 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>NutriMate</title>
 
+<!-- 
+  🧠 Project: NutriMate — Personal AI Diet Planner
+  📅 Version: 1.0
+  👨‍💻 Developer: Ishaan Sareen and Atharv Ajmani
+  🤖 Description:
+      NutriMate is an AI-powered diet planner that interacts with users,
+      collects health and lifestyle details, and generates a personalized
+      diet plan using the Groq API (LLaMA model). The system calculates
+      calorie needs and produces balanced meal suggestions.
+  🧾 Features:
+      - Dynamic chatbot-style question flow
+      - Calorie calculation based on Mifflin-St Jeor formula
+      - Cuisine-based meal generation
+      - PDF export of generated diet plan
+  ⚠️ License:
+      This project is for educational and personal use only.
+      Do not redistribute or commercialize without permission.
+-->
+
 <style>
   body {
     font-family: Poppins, system-ui;
@@ -16,6 +35,7 @@
     height: 100vh;
     margin: 0;
     padding: 20px;
+    flex-direction: column;
   }
 
   .card {
@@ -87,6 +107,13 @@
     cursor: pointer;
     font-weight: 700;
   }
+
+  footer {
+    text-align: center;
+    font-size: 13px;
+    opacity: 0.6;
+    margin-top: 15px;
+  }
 </style>
 </head>
 
@@ -97,11 +124,15 @@
   <div id="promptArea"></div>
 </div>
 
+<!-- 📜 Copyright Footer -->
+<footer>
+  © 2025 NutriMate by Ishaan Sareen. All rights reserved.
+</footer>
+
 
 <script type="module">
-
 // ✅ Groq API Key
-const OPENAI_API_KEY = "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";
+const OPENAI_API_KEY = "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";
 
 // ✅ Works now
 const API_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -303,7 +334,6 @@ function exportPDF(txt) {
 // Start
 append("bot", "Welcome to NutriMate your personal diet planner 🤖🍏");
 renderQuestion(index);
-
 </script>
 </body>
 </html>
